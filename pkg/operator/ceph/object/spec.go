@@ -252,7 +252,7 @@ func (c *clusterConfig) makeRGWPodSpec(rgwConfig *rgwConfig) (v1.PodTemplateSpec
 
 	// If host networking is not enabled, preferred pod anti-affinity is added to the rgw daemons
 	labels := getLabels(c.store.Name, c.store.Namespace, false)
-	k8sutil.SetNodeAntiAffinityForPod(&podSpec, c.store.Spec.IsHostNetwork(c.clusterSpec), v1.LabelHostname, labels, nil)
+	k8sutil.SetNodeAntiAffinityForPod(&podSpec, c.store.Spec.IsHostNetwork(c.clusterSpec), k8sutil.LabelHostname(), labels, nil)
 
 	podTemplateSpec := v1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
@@ -872,10 +872,10 @@ func (c *clusterConfig) generateVolumeSourceWithCaBundleSecret() (*v1.SecretVolu
 
 func (c *clusterConfig) rgwTLSSecretType(secretName string) (v1.SecretType, error) {
 	rgwTlsSecret, err := c.context.Clientset.CoreV1().Secrets(c.clusterInfo.Namespace).Get(c.clusterInfo.Context, secretName, metav1.GetOptions{})
-	if rgwTlsSecret != nil {
-		return rgwTlsSecret.Type, nil
+	if err != nil {
+		return "", errors.Wrapf(err, "failed to get Kubernetes secrets referring the TLS certificates")
 	}
-	return "", errors.Wrapf(err, "no Kubernetes secrets referring TLS certificates found")
+	return rgwTlsSecret.Type, nil
 }
 
 func getDaemonName(rgwConfig *rgwConfig) string {
